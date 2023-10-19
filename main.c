@@ -1,53 +1,86 @@
-nclude "monty.h"
+#define _POSIX_C_SOURCE 200809L
+#include "monty.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+global_t vglo;
+
+/**
+ * free_vglo - Function to free the global structure
+ */
+void free_vglo(void)
+{
+    if (vglo.head != NULL)
+        free_dlistint(vglo.head);
+    if (vglo.buffer != NULL)
+        free(vglo.buffer);
+    if (vglo.fd != NULL)
+        fclose(vglo.fd);
+}
+
+/**
+ * start_vglo - Function to initialize the global structure
+ * @fd: File descriptor
+ */
+void start_vglo(FILE *fd)
+{
+    vglo.lifo = 1;
+    vglo.cont = 1;
+    vglo.arg = NULL;
+    vglo.head = NULL;
+    vglo.fd = fd;
+    vglo.buffer = NULL;
+}
 
 /**
  * main - Monty ByteCode Interpreter
- * @argc: Argument count
- * @argv: Argument vector
- *
- * Return: 0 on success, 1 on failure
+ * @argc: Number of arguments
+ * @argv: Array of arguments
+ * Return: Always 0
  */
 int main(int argc, char *argv[])
 {
-	if (argc != 2)
-	{
-		fprintf(stderr, "USAGE: monty file\n");
-		return (EXIT_FAILURE);
-	}
+    FILE *fd;
+    size_t size = 0;
+    ssize_t nlines = 0;
+    void (*f)(stack_t **stack, unsigned int line_number);
+    char *lines[2];
 
-	vglo.fd = fopen(argv[1], "r");
-	if (vglo.fd == NULL)
-	{
-		fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
-		return (EXIT_FAILURE);
-	}
+    if (argc != 2)
+    {
 
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read;
+    }
 
-	while ((read = getline(&(vglo.buffer), &len, vglo.fd)) != -1)
-	{
-		vglo.cont++;
-		char *opcode = _strtoky(vglo.buffer, " \t\n");
+    fd = fopen(argv[1], "r");
+    if (fd == NULL)
+    {
+        fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
 
-		if (opcode != NULL)
-		{
-			void (*op_func)(stack_t **stack, unsigned int line_number);
+    start_vglo(fd);
 
-			op_func = get_opcodes(opcode);
+    while ((nlines = getline(&vglo.buffer, &size, fd)) != -1)
+    {
+        lines[0] = _strtoky(vglo.buffer, " \t\n");
+        if (lines[0] == NULL)
+            continue;
 
-			if (op_func != NULL)
-				op_func(&(vglo.head), vglo.cont);
-			else
-			{
-				fprintf(stderr, "L%u: unknown instruction %s\n", vglo.cont, opcode);
-				free_vglo();
-				return (EXIT_FAILURE);
-			}
-		}
-	}
+        f = get_opcodes(lines[0]);
+        if (f == NULL)
+        {
+            fprintf(stderr, "L%u: unknown instruction %s\n", vglo.cont, lines[0]);
+            free_vglo();
+            exit(EXIT_FAILURE);
+        }
 
-	free_vglo();
-	return (EXIT_SUCCESS);
+        vglo.arg = _strtoky(NULL, " \t\n");
+        f(&vglo.head, vglo.cont);
+        vglo.cont++;
+    }
+
+    free_vglo();
+    exit(EXIT_SUCCESS);
 }
