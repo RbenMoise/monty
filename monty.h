@@ -81,4 +81,11 @@ void more_err(int error_code, ...);
 void string_err(int error_code, ...);
 void rotr(stack_t **, unsigned int);
 
+int openMontyFile(const char *filename, stack_t **head);
+stack_t *createStackNode(int n);
+void freeStack(stack_t **head);
+void addStackNode(stack_t **newNode, stack_t **head);
+
+
+
 #endif
